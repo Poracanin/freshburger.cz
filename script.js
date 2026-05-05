@@ -133,8 +133,10 @@ const menuData = [
 
 const ALL_CATEGORY = "Vše";
 const ALL_PAGE_SIZE = 10;
+const MOBILE_ALL_PAGE_SIZE = 6;
 const CART_KEY = "freshBurgerCart";
 const MODE_KEY = "freshBurgerMode";
+const mobileMenuQuery = window.matchMedia("(max-width: 620px)");
 
 const categoryTabs = document.querySelector("#categoryTabs");
 const menuGrid = document.querySelector("#menuGrid");
@@ -188,7 +190,7 @@ function loadCart() {
 
 const state = {
   activeCategory: ALL_CATEGORY,
-  visibleAllItems: ALL_PAGE_SIZE,
+  visibleAllItems: currentAllPageSize(),
   cart: loadCart(),
   mode: localStorage.getItem(MODE_KEY) || "Rozvoz"
 };
@@ -233,6 +235,10 @@ function formatItemCount(count) {
   if (count === 1) return "1 položka";
   if (count > 1 && count < 5) return `${count} položky`;
   return `${count} položek`;
+}
+
+function currentAllPageSize() {
+  return mobileMenuQuery.matches ? MOBILE_ALL_PAGE_SIZE : ALL_PAGE_SIZE;
 }
 
 function renderTabs() {
@@ -414,7 +420,7 @@ categoryTabs?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-category]");
   if (!button) return;
   state.activeCategory = button.dataset.category;
-  state.visibleAllItems = ALL_PAGE_SIZE;
+  state.visibleAllItems = currentAllPageSize();
   renderTabs();
   renderMenu();
 });
@@ -422,7 +428,7 @@ categoryTabs?.addEventListener("click", (event) => {
 menuGrid?.addEventListener("click", (event) => {
   const loadMore = event.target.closest("[data-load-more]");
   if (loadMore) {
-    state.visibleAllItems += ALL_PAGE_SIZE;
+    state.visibleAllItems += currentAllPageSize();
     renderMenu();
     return;
   }
@@ -492,6 +498,18 @@ navLinks?.addEventListener("click", (event) => {
   navToggle?.setAttribute("aria-expanded", "false");
   document.body.classList.remove("nav-open");
 });
+
+function handleMenuViewportChange() {
+  if (state.activeCategory !== ALL_CATEGORY) return;
+  state.visibleAllItems = currentAllPageSize();
+  renderMenu();
+}
+
+if (mobileMenuQuery.addEventListener) {
+  mobileMenuQuery.addEventListener("change", handleMenuViewportChange);
+} else {
+  mobileMenuQuery.addListener(handleMenuViewportChange);
+}
 
 renderTabs();
 renderMenu();
