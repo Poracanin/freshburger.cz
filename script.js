@@ -132,6 +132,7 @@ const menuData = [
 ];
 
 const ALL_CATEGORY = "Vše";
+const ALL_PAGE_SIZE = 10;
 const CART_KEY = "freshBurgerCart";
 const MODE_KEY = "freshBurgerMode";
 
@@ -187,6 +188,7 @@ function loadCart() {
 
 const state = {
   activeCategory: ALL_CATEGORY,
+  visibleAllItems: ALL_PAGE_SIZE,
   cart: loadCart(),
   mode: localStorage.getItem(MODE_KEY) || "Rozvoz"
 };
@@ -248,17 +250,26 @@ function renderTabs() {
     .join("");
 }
 
+function activeMenuItems() {
+  if (state.activeCategory === ALL_CATEGORY) {
+    return allItems();
+  }
+
+  const group = menuData.find((group) => group.category === state.activeCategory);
+  if (!group) return [];
+
+  return group.items.map((item) => ({ ...item, category: group.category }));
+}
+
 function renderMenu() {
   if (!menuGrid) return;
 
-  const items =
-    state.activeCategory === ALL_CATEGORY
-      ? allItems()
-      : menuData
-          .find((group) => group.category === state.activeCategory)
-          .items.map((item) => ({ ...item, category: state.activeCategory }));
+  const items = activeMenuItems();
+  const isAllCategory = state.activeCategory === ALL_CATEGORY;
+  const visibleItems = isAllCategory ? items.slice(0, state.visibleAllItems) : items;
+  const hasMore = isAllCategory && visibleItems.length < items.length;
 
-  menuGrid.innerHTML = items
+  const menuCards = visibleItems
     .map(
       (item) => `
       <article class="menu-card ${item.featured ? "featured" : ""}">
@@ -275,6 +286,21 @@ function renderMenu() {
     `
     )
     .join("");
+
+  const loadMore = isAllCategory
+    ? `
+      <div class="load-more-wrap">
+        <p>Zobrazeno ${visibleItems.length} z ${items.length} položek</p>
+        ${
+          hasMore
+            ? `<button class="load-more-btn" type="button" data-load-more>Načíst další</button>`
+            : ""
+        }
+      </div>
+    `
+    : "";
+
+  menuGrid.innerHTML = menuCards + loadMore;
 }
 
 function renderBottomCart() {
@@ -388,11 +414,19 @@ categoryTabs?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-category]");
   if (!button) return;
   state.activeCategory = button.dataset.category;
+  state.visibleAllItems = ALL_PAGE_SIZE;
   renderTabs();
   renderMenu();
 });
 
 menuGrid?.addEventListener("click", (event) => {
+  const loadMore = event.target.closest("[data-load-more]");
+  if (loadMore) {
+    state.visibleAllItems += ALL_PAGE_SIZE;
+    renderMenu();
+    return;
+  }
+
   const button = event.target.closest("[data-add]");
   if (!button) return;
   addToCart(button.dataset.add);
